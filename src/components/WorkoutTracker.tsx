@@ -19,16 +19,16 @@ interface Set {
 }
 
 const EXERCISE_LIBRARY = [
-  "Barbell Bench Press",
-  "Squat",
-  "Deadlift",
-  "Overhead Press",
-  "Barbell Row",
-  "Pull-ups",
-  "Dumbbell Curl",
-  "Tricep Dips",
-  "Leg Press",
-  "Romanian Deadlift",
+  "Bankdrücken Langhantel",
+  "Kniebeugen",
+  "Kreuzheben",
+  "Überkopfdrücken",
+  "Langhantelrudern",
+  "Klimmzüge",
+  "Kurzhantel Curls",
+  "Trizeps Dips",
+  "Beinpresse",
+  "Rumänisches Kreuzheben",
 ];
 
 const WorkoutTracker = () => {
@@ -43,7 +43,7 @@ const WorkoutTracker = () => {
     };
     setExercises([...exercises, newExercise]);
     setShowExerciseSelect(false);
-    toast.success(`Added ${name}`);
+    toast.success(`${name} hinzugefügt`);
   };
 
   const addSet = (exerciseId: string) => {
@@ -89,7 +89,7 @@ const WorkoutTracker = () => {
 
   const deleteExercise = (exerciseId: string) => {
     setExercises(exercises.filter((ex) => ex.id !== exerciseId));
-    toast.success("Exercise removed");
+    toast.success("Übung entfernt");
   };
 
   const finishWorkout = () => {
@@ -98,22 +98,22 @@ const WorkoutTracker = () => {
       (sum, ex) => sum + ex.sets.filter((s) => s.completed).length,
       0
     );
-    toast.success(`Workout complete! ${completedSets}/${totalSets} sets finished`);
+    toast.success(`Training abgeschlossen! ${completedSets}/${totalSets} Sätze beendet`);
   };
 
   return (
     <div className="pb-24 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Workout</h2>
+        <h2 className="text-2xl font-bold">Training</h2>
         <Button onClick={() => setShowExerciseSelect(!showExerciseSelect)} size="sm" className="glow-neon">
           <Plus className="w-4 h-4 mr-2" />
-          Add Exercise
+          Übung hinzufügen
         </Button>
       </div>
 
       {showExerciseSelect && (
         <Card className="p-4 bg-secondary border-accent/20">
-          <h3 className="font-bold mb-3 text-sm text-muted-foreground">Select Exercise</h3>
+          <h3 className="font-bold mb-3 text-sm text-muted-foreground">Übung auswählen</h3>
           <div className="grid grid-cols-2 gap-2">
             {EXERCISE_LIBRARY.map((exercise) => (
               <Button
@@ -132,7 +132,7 @@ const WorkoutTracker = () => {
 
       {exercises.length === 0 ? (
         <Card className="p-12 text-center bg-card/50">
-          <p className="text-muted-foreground">No exercises yet. Add one to start!</p>
+          <p className="text-muted-foreground">Noch keine Übungen. Füge eine hinzu um zu starten!</p>
         </Card>
       ) : (
         <>
@@ -156,7 +156,7 @@ const WorkoutTracker = () => {
                     <span className="text-sm font-medium w-8 text-muted-foreground">#{index + 1}</span>
                     <Input
                       type="number"
-                      placeholder="Reps"
+                      placeholder="Wdh"
                       value={set.reps || ""}
                       onChange={(e) =>
                         updateSet(exercise.id, set.id, "reps", parseInt(e.target.value) || 0)
@@ -191,13 +191,13 @@ const WorkoutTracker = () => {
                 onClick={() => addSet(exercise.id)}
                 className="w-full mt-3 text-primary"
               >
-                + Add Set
+                + Satz hinzufügen
               </Button>
             </Card>
           ))}
 
           <Button onClick={finishWorkout} className="w-full glow-neon" size="lg">
-            Finish Workout
+            Training beenden
           </Button>
         </>
       )}

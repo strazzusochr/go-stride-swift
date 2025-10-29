@@ -14,7 +14,7 @@ const NutritionPlanner = () => {
 
   const calculateMacros = () => {
     setShowResults(true);
-    toast.success("Macros calculated!");
+    toast.success("Makros berechnet!");
   };
 
   const leanMass = weight * (1 - bodyFat / 100);
@@ -26,18 +26,18 @@ const NutritionPlanner = () => {
 
   return (
     <div className="pb-24 space-y-6">
-      <h2 className="text-2xl font-bold">Nutrition</h2>
+      <h2 className="text-2xl font-bold">Ernährung</h2>
 
       {/* Macro Calculator */}
       <Card className="p-5 bg-card">
         <div className="flex items-center gap-2 mb-4">
           <Calculator className="w-5 h-5 text-primary" />
-          <h3 className="font-bold text-lg">Macro Calculator</h3>
+          <h3 className="font-bold text-lg">Makro-Rechner</h3>
         </div>
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="weight">Body Weight (kg)</Label>
+            <Label htmlFor="weight">Körpergewicht (kg)</Label>
             <Input
               id="weight"
               type="number"
@@ -48,7 +48,7 @@ const NutritionPlanner = () => {
           </div>
 
           <div>
-            <Label htmlFor="bodyfat">Body Fat %</Label>
+            <Label htmlFor="bodyfat">Körperfett %</Label>
             <Input
               id="bodyfat"
               type="number"
@@ -59,32 +59,32 @@ const NutritionPlanner = () => {
           </div>
 
           <div>
-            <Label>Goal</Label>
+            <Label>Ziel</Label>
             <div className="grid grid-cols-3 gap-2 mt-2">
               <Button
                 variant={goal === "bulk" ? "default" : "outline"}
                 onClick={() => setGoal("bulk")}
                 className={goal === "bulk" ? "glow-neon" : ""}
               >
-                Bulk
+                Aufbau
               </Button>
               <Button
                 variant={goal === "maintain" ? "default" : "outline"}
                 onClick={() => setGoal("maintain")}
               >
-                Maintain
+                Halten
               </Button>
               <Button
                 variant={goal === "cut" ? "default" : "outline"}
                 onClick={() => setGoal("cut")}
               >
-                Cut
+                Diät
               </Button>
             </div>
           </div>
 
           <Button onClick={calculateMacros} className="w-full glow-neon">
-            Calculate Macros
+            Makros berechnen
           </Button>
         </div>
       </Card>
@@ -92,19 +92,19 @@ const NutritionPlanner = () => {
       {/* Results */}
       {showResults && (
         <Card className="p-5 bg-gradient-metal border-accent/20">
-          <h3 className="font-bold text-lg mb-4 text-neon">Your Daily Targets</h3>
+          <h3 className="font-bold text-lg mb-4 text-neon">Deine täglichen Ziele</h3>
 
           <div className="space-y-3">
-            <MacroRow label="Calories" value={`${calories} kcal`} color="primary" />
+            <MacroRow label="Kalorien" value={`${calories} kcal`} color="primary" />
             <MacroRow label="Protein" value={`${protein}g`} color="primary" />
-            <MacroRow label="Carbs" value={`${carbs}g`} color="primary" />
-            <MacroRow label="Fat" value={`${fat}g`} color="primary" />
+            <MacroRow label="Kohlenhydrate" value={`${carbs}g`} color="primary" />
+            <MacroRow label="Fett" value={`${fat}g`} color="primary" />
           </div>
 
           <div className="mt-4 p-3 bg-secondary/30 rounded-lg flex items-start gap-2">
             <Info className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
             <p className="text-xs text-muted-foreground">
-              These are baseline recommendations. Adjust based on your training intensity and results.
+              Dies sind Basisempfehlungen. Passe sie basierend auf deiner Trainingsintensität und Ergebnissen an.
             </p>
           </div>
         </Card>
@@ -112,22 +112,22 @@ const NutritionPlanner = () => {
 
       {/* Meal Ideas */}
       <Card className="p-5 bg-card">
-        <h3 className="font-bold text-lg mb-4">Sample Meals</h3>
+        <h3 className="font-bold text-lg mb-4">Beispielmahlzeiten</h3>
         <div className="space-y-3">
           <MealCard
-            title="Breakfast"
-            items={["6 eggs", "100g oats", "1 banana", "Protein shake"]}
-            macros="P: 60g | C: 80g | F: 25g"
+            title="Frühstück"
+            items={["6 Eier", "100g Haferflocken", "1 Banane", "Proteinshake"]}
+            macros="P: 60g | K: 80g | F: 25g"
           />
           <MealCard
-            title="Lunch"
-            items={["200g chicken breast", "200g rice", "Vegetables", "Olive oil"]}
-            macros="P: 50g | C: 75g | F: 15g"
+            title="Mittagessen"
+            items={["200g Hähnchenbrust", "200g Reis", "Gemüse", "Olivenöl"]}
+            macros="P: 50g | K: 75g | F: 15g"
           />
           <MealCard
-            title="Dinner"
-            items={["250g lean beef", "Sweet potato", "Broccoli", "Avocado"]}
-            macros="P: 55g | C: 60g | F: 30g"
+            title="Abendessen"
+            items={["250g mageres Rindfleisch", "Süßkartoffel", "Brokkoli", "Avocado"]}
+            macros="P: 55g | K: 60g | F: 30g"
           />
         </div>
       </Card>

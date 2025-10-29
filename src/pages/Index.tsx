@@ -42,25 +42,25 @@ const Index = () => {
           <div className="grid grid-cols-4 gap-2 py-3">
             <NavButton
               icon={<Dumbbell className="w-5 h-5" />}
-              label="Home"
+              label="Start"
               active={activeTab === "home"}
               onClick={() => setActiveTab("home")}
             />
             <NavButton
               icon={<Timer className="w-5 h-5" />}
-              label="Workout"
+              label="Training"
               active={activeTab === "workout"}
               onClick={() => setActiveTab("workout")}
             />
             <NavButton
               icon={<TrendingUp className="w-5 h-5" />}
-              label="Progress"
+              label="Fortschritt"
               active={activeTab === "progress"}
               onClick={() => setActiveTab("progress")}
             />
             <NavButton
               icon={<Utensils className="w-5 h-5" />}
-              label="Nutrition"
+              label="Ernährung"
               active={activeTab === "nutrition"}
               onClick={() => setActiveTab("nutrition")}
             />
@@ -77,38 +77,38 @@ const HomeView = ({ onNavigate }: { onNavigate: (tab: Tab) => void }) => {
       {/* Hero Section */}
       <Card className="relative overflow-hidden gradient-metal p-8 border-accent/20">
         <div className="relative z-10">
-          <h2 className="text-3xl font-bold mb-2 text-neon">Welcome Back, Warrior</h2>
-          <p className="text-muted-foreground mb-6">Ready to dominate your limits?</p>
+          <h2 className="text-3xl font-bold mb-2 text-neon">Willkommen zurück, Krieger</h2>
+          <p className="text-muted-foreground mb-6">Bereit, deine Grenzen zu sprengen?</p>
           <Button onClick={() => onNavigate("workout")} className="bg-primary hover:bg-primary/90 text-background font-bold glow-neon">
-            Start Workout
+            Training starten
           </Button>
         </div>
       </Card>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <StatCard icon={<Target />} label="This Week" value="5 Workouts" />
-        <StatCard icon={<Award />} label="Total Volume" value="12,450 kg" />
+        <StatCard icon={<Target />} label="Diese Woche" value="5 Trainings" />
+        <StatCard icon={<Award />} label="Gesamtvolumen" value="12.450 kg" />
       </div>
 
       {/* Feature Cards */}
       <div className="space-y-4">
         <FeatureCard
           icon={<Timer className="w-6 h-6" />}
-          title="Workout Tracker"
-          description="Log exercises, sets, reps, and track your training volume"
+          title="Trainings-Tracker"
+          description="Erfasse Übungen, Sätze, Wiederholungen und tracke dein Trainingsvolumen"
           onClick={() => onNavigate("workout")}
         />
         <FeatureCard
           icon={<TrendingUp className="w-6 h-6" />}
-          title="Progress Analytics"
-          description="Visualize your strength gains and muscle growth"
+          title="Fortschritts-Analyse"
+          description="Visualisiere deinen Kraftzuwachs und Muskelaufbau"
           onClick={() => onNavigate("progress")}
         />
         <FeatureCard
           icon={<Utensils className="w-6 h-6" />}
-          title="Nutrition Planner"
-          description="Calculate macros and plan meals for optimal gains"
+          title="Ernährungsplaner"
+          description="Berechne Makros und plane Mahlzeiten für optimalen Muskelaufbau"
           onClick={() => onNavigate("nutrition")}
         />
       </div>

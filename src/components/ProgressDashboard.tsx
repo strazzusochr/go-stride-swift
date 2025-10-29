@@ -4,31 +4,31 @@ import { Card } from "@/components/ui/card";
 const ProgressDashboard = () => {
   return (
     <div className="pb-24 space-y-6">
-      <h2 className="text-2xl font-bold">Progress</h2>
+      <h2 className="text-2xl font-bold">Fortschritt</h2>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 gap-4">
         <MetricCard
           icon={<TrendingUp className="w-5 h-5" />}
-          label="Total Volume"
-          value="12,450 kg"
+          label="Gesamtvolumen"
+          value="12.450 kg"
           change="+8%"
         />
         <MetricCard
           icon={<Activity className="w-5 h-5" />}
-          label="Workouts"
+          label="Trainings"
           value="23"
           change="+3"
         />
         <MetricCard
           icon={<Flame className="w-5 h-5" />}
-          label="Streak"
-          value="7 days"
+          label="Serie"
+          value="7 Tage"
           change="🔥"
         />
         <MetricCard
           icon={<Award className="w-5 h-5" />}
-          label="PR's Hit"
+          label="PRs erreicht"
           value="5"
           change="+2"
         />
@@ -36,17 +36,17 @@ const ProgressDashboard = () => {
 
       {/* Personal Records */}
       <Card className="p-5 bg-card">
-        <h3 className="font-bold mb-4 text-lg">Personal Records</h3>
+        <h3 className="font-bold mb-4 text-lg">Persönliche Rekorde</h3>
         <div className="space-y-3">
-          <PRItem exercise="Bench Press" weight="120 kg" date="2 days ago" />
-          <PRItem exercise="Squat" weight="180 kg" date="1 week ago" />
-          <PRItem exercise="Deadlift" weight="220 kg" date="1 week ago" />
+          <PRItem exercise="Bankdrücken" weight="120 kg" date="Vor 2 Tagen" />
+          <PRItem exercise="Kniebeugen" weight="180 kg" date="Vor 1 Woche" />
+          <PRItem exercise="Kreuzheben" weight="220 kg" date="Vor 1 Woche" />
         </div>
       </Card>
 
       {/* Weekly Volume Chart Placeholder */}
       <Card className="p-5 bg-card">
-        <h3 className="font-bold mb-4 text-lg">Weekly Volume</h3>
+        <h3 className="font-bold mb-4 text-lg">Wochenvolumen</h3>
         <div className="h-48 flex items-end justify-between gap-2">
           {[65, 80, 75, 90, 85, 95, 70].map((height, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-2">
@@ -55,7 +55,7 @@ const ProgressDashboard = () => {
                 style={{ height: `${height}%` }}
               />
               <span className="text-xs text-muted-foreground">
-                {["M", "T", "W", "T", "F", "S", "S"][i]}
+                {["M", "D", "M", "D", "F", "S", "S"][i]}
               </span>
             </div>
           ))}
@@ -64,21 +64,21 @@ const ProgressDashboard = () => {
 
       {/* Recent Achievements */}
       <Card className="p-5 bg-secondary/30">
-        <h3 className="font-bold mb-4 text-lg">Recent Achievements</h3>
+        <h3 className="font-bold mb-4 text-lg">Letzte Erfolge</h3>
         <div className="space-y-3">
           <Achievement
-            title="Volume Beast"
-            description="Completed 20,000 kg total volume"
+            title="Volumen-Bestie"
+            description="20.000 kg Gesamtvolumen abgeschlossen"
             icon="🏆"
           />
           <Achievement
-            title="Consistency King"
-            description="7 day workout streak"
+            title="Beständigkeits-König"
+            description="7-Tage Trainings-Serie"
             icon="🔥"
           />
           <Achievement
-            title="PR Master"
-            description="Set 5 new personal records"
+            title="PR-Meister"
+            description="5 neue persönliche Rekorde aufgestellt"
             icon="💪"
           />
         </div>
