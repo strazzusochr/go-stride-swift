@@ -30,7 +30,6 @@ interface WorkoutExercise {
 }
 
 export default function ActiveWorkout() {
-  console.log("[Debug] React version in ActiveWorkout:", React.version);
   const { user } = useAuth();
   const [workoutActive, setWorkoutActive] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);

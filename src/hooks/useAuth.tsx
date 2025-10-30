@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import React, { useState, useEffect, createContext, useContext } from "react";
 import { auth, User, Session } from "@/lib/supabase";
 
 interface AuthContextType {
