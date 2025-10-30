@@ -5,6 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const nutritionSchema = z.object({
+  weight: z.number().min(30, "Gewicht muss mindestens 30 kg sein").max(300, "Gewicht darf maximal 300 kg sein"),
+  bodyFat: z.number().min(3, "Körperfett muss mindestens 3% sein").max(50, "Körperfett darf maximal 50% sein"),
+});
 
 const NutritionPlanner = () => {
   const [weight, setWeight] = useState<number>(80);
@@ -13,7 +19,37 @@ const NutritionPlanner = () => {
   const [goal, setGoal] = useState<"bulk" | "cut" | "maintain">("bulk");
   const [showResults, setShowResults] = useState(false);
 
+  const validateAndSetWeight = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    const result = nutritionSchema.shape.weight.safeParse(numValue);
+    
+    if (!result.success) {
+      toast.error(result.error.errors[0].message);
+      return;
+    }
+    setWeight(numValue);
+  };
+
+  const validateAndSetBodyFat = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    const result = nutritionSchema.shape.bodyFat.safeParse(numValue);
+    
+    if (!result.success) {
+      toast.error(result.error.errors[0].message);
+      return;
+    }
+    setBodyFat(numValue);
+  };
+
   const calculateMacros = () => {
+    // Final validation before calculating
+    const result = nutritionSchema.safeParse({ weight, bodyFat });
+    
+    if (!result.success) {
+      toast.error(result.error.errors[0].message);
+      return;
+    }
+    
     setShowResults(true);
     toast.success("Makros berechnet!");
   };
@@ -87,8 +123,11 @@ const NutritionPlanner = () => {
             <Input
               id="weight"
               type="number"
+              min="30"
+              max="300"
               value={weight}
-              onChange={(e) => setWeight(parseInt(e.target.value) || 0)}
+              onChange={(e) => validateAndSetWeight(e.target.value)}
+              onBlur={(e) => validateAndSetWeight(e.target.value)}
               className="mt-1"
             />
           </div>
@@ -98,8 +137,11 @@ const NutritionPlanner = () => {
             <Input
               id="bodyfat"
               type="number"
+              min="3"
+              max="50"
               value={bodyFat}
-              onChange={(e) => setBodyFat(parseInt(e.target.value) || 0)}
+              onChange={(e) => validateAndSetBodyFat(e.target.value)}
+              onBlur={(e) => validateAndSetBodyFat(e.target.value)}
               className="mt-1"
             />
           </div>
