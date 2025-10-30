@@ -225,7 +225,7 @@ export type Database = {
         Row: {
           completed: boolean | null
           created_at: string
-          exercise_id: string
+          exercise_id: string | null
           id: string
           reps: number | null
           rest_actual_sec: number | null
@@ -243,7 +243,7 @@ export type Database = {
         Insert: {
           completed?: boolean | null
           created_at?: string
-          exercise_id: string
+          exercise_id?: string | null
           id?: string
           reps?: number | null
           rest_actual_sec?: number | null
@@ -261,7 +261,7 @@ export type Database = {
         Update: {
           completed?: boolean | null
           created_at?: string
-          exercise_id?: string
+          exercise_id?: string | null
           id?: string
           reps?: number | null
           rest_actual_sec?: number | null

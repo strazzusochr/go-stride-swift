@@ -6,7 +6,7 @@ import { Dumbbell } from "lucide-react";
 import ExerciseDatabase from "@/components/ExerciseDatabase";
 import RecoveryTracker from "@/components/RecoveryTracker";
 import TemplateManager from "@/components/TemplateManager";
-import WorkoutTracker from "@/components/WorkoutTracker";
+import ActiveWorkout from "@/components/ActiveWorkout";
 import WorkoutHistory from "@/components/WorkoutHistory";
 import ProgressDashboard from "@/components/ProgressDashboard";
 
@@ -50,9 +50,7 @@ export default function Index() {
           </TabsList>
 
           <TabsContent value="workout">
-            <Card className="p-6">
-              <WorkoutTracker />
-            </Card>
+            <ActiveWorkout />
           </TabsContent>
 
           <TabsContent value="exercises">

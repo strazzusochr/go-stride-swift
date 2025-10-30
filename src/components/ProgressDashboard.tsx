@@ -3,7 +3,8 @@ import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Dumbbell, Target, Award, RotateCcw } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { TrendingUp, Dumbbell, Target, Award, RotateCcw, Activity } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -68,19 +69,43 @@ export default function ProgressDashboard() {
         .order("date", { ascending: false })
         .limit(5);
 
-      // Calculate e1RM for recent sets
+      // Get sets per zone (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { data: zoneSets } = await supabase
+        .from("set_entries")
+        .select(`
+          zone_id,
+          zones(key, name),
+          workout_sessions!inner(user_id, date)
+        `)
+        .eq("workout_sessions.user_id", user.id)
+        .eq("completed", true)
+        .gte("workout_sessions.date", sevenDaysAgo.toISOString().split('T')[0]);
+
+      const setsPerZone = zoneSets?.reduce((acc, set) => {
+        if (set.zone_id && set.zones) {
+          const key = set.zones.name;
+          acc[key] = (acc[key] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      // Calculate e1RM for recent sets (with zones)
       const { data: recentSets } = await supabase
         .from("set_entries")
         .select(`
           *,
-          exercises(name),
+          zones(name),
           workout_sessions!inner(user_id, date)
         `)
         .eq("workout_sessions.user_id", user.id)
         .not("weight", "is", null)
         .not("reps", "is", null)
+        .not("zone_id", "is", null)
         .order("workout_sessions.date", { ascending: false })
-        .limit(50);
+        .limit(100);
 
       const e1rmData = recentSets?.map(set => {
         // Brzycki formula: weight * (36 / (37 - reps))
@@ -88,7 +113,7 @@ export default function ProgressDashboard() {
           ? set.weight * (36 / (37 - set.reps))
           : null;
         return {
-          exercise: set.exercises?.name,
+          zone: set.zones?.name || 'Unknown',
           e1rm,
           date: set.workout_sessions?.date,
         };
@@ -100,6 +125,7 @@ export default function ProgressDashboard() {
         totalVolume: Math.round(totalVolume),
         personalRecords: prs,
         e1rmData,
+        setsPerZone,
       };
     },
     enabled: !!user?.id,
@@ -127,7 +153,7 @@ export default function ProgressDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       <h2 className="text-2xl font-bold">Fortschritt & Statistiken</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -231,28 +257,60 @@ export default function ProgressDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Geschätzte 1RM (e1RM) - Top Übungen</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Sätze pro Zone (letzte 7 Tage)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stats.setsPerZone && Object.keys(stats.setsPerZone).length > 0 ? (
+            <ScrollArea className="h-64">
+              <div className="space-y-2">
+                {Object.entries(stats.setsPerZone)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([zone, sets]) => (
+                    <div
+                      key={zone}
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    >
+                      <span className="font-medium text-sm">{zone}</span>
+                      <Badge variant="secondary">{sets} Sätze</Badge>
+                    </div>
+                  ))}
+              </div>
+            </ScrollArea>
+          ) : (
+            <p className="text-center text-muted-foreground py-6">
+              Keine Trainingsdaten in den letzten 7 Tagen
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Geschätzte 1RM (e1RM) - Top Zonen</CardTitle>
         </CardHeader>
         <CardContent>
           {stats.e1rmData && stats.e1rmData.length > 0 ? (
             <div className="space-y-3">
               {Object.entries(
                 stats.e1rmData.reduce((acc, item) => {
-                  if (!item.exercise) return acc;
-                  if (!acc[item.exercise] || (item.e1rm && item.e1rm > acc[item.exercise])) {
-                    acc[item.exercise] = item.e1rm;
+                  if (!item.zone) return acc;
+                  if (!acc[item.zone] || (item.e1rm && item.e1rm > acc[item.zone])) {
+                    acc[item.zone] = item.e1rm;
                   }
                   return acc;
                 }, {} as Record<string, number | null>)
               )
                 .sort((a, b) => (b[1] || 0) - (a[1] || 0))
                 .slice(0, 10)
-                .map(([exercise, e1rm]) => (
+                .map(([zone, e1rm]) => (
                   <div
-                    key={exercise}
+                    key={zone}
                     className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                   >
-                    <span className="font-medium">{exercise}</span>
+                    <span className="font-medium">{zone}</span>
                     <Badge variant="outline">
                       ~{Math.round(e1rm || 0)} kg (1RM)
                     </Badge>

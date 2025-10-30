@@ -129,15 +129,15 @@ export default function ActiveWorkout() {
     }
 
     try {
-      const { error } = await supabase.from("set_entries").insert({
-        session_id: sessionId,
+      const { error } = await supabase.from("set_entries").insert([{
+        session_id: sessionId!,
         zone_id: exercise.zoneId,
         set_number: set.set_number,
         weight: set.weight,
         reps: set.reps,
         rir: set.rir || 0,
         completed: true,
-      });
+      }]);
 
       if (error) throw error;
 
