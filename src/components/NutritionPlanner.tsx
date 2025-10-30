@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calculator, Info, Droplet, Zap, TrendingUp } from "lucide-react";
+import { Calculator, Info, Droplet, Zap, TrendingUp, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,15 @@ const NutritionPlanner = () => {
   const calculateMacros = () => {
     setShowResults(true);
     toast.success("Makros berechnet!");
+  };
+
+  const resetForm = () => {
+    setWeight(80);
+    setBodyFat(15);
+    setGender("male");
+    setGoal("bulk");
+    setShowResults(false);
+    toast.success("Formular zurückgesetzt");
   };
 
   // Berechnung Grundumsatz (Harris-Benedict)
@@ -55,7 +64,15 @@ const NutritionPlanner = () => {
 
   return (
     <div className="pb-24 space-y-6">
-      <h2 className="text-2xl font-bold">Ernährung</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Ernährung</h2>
+        {showResults && (
+          <Button onClick={resetForm} size="sm" variant="outline">
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Zurücksetzen
+          </Button>
+        )}
+      </div>
 
       {/* Macro Calculator */}
       <Card className="p-5 bg-card">

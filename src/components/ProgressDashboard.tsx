@@ -1,36 +1,64 @@
-import { TrendingUp, Activity, Flame, Award } from "lucide-react";
+import { useState } from "react";
+import { TrendingUp, Activity, Flame, Award, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const ProgressDashboard = () => {
+  const [totalVolume, setTotalVolume] = useState("12.450 kg");
+  const [volumeChange, setVolumeChange] = useState("+8%");
+  const [workouts, setWorkouts] = useState("23");
+  const [workoutsChange, setWorkoutsChange] = useState("+3");
+  const [streak, setStreak] = useState("7 Tage");
+  const [prs, setPrs] = useState("5");
+  const [prsChange, setPrsChange] = useState("+2");
+
+  const resetProgress = () => {
+    setTotalVolume("0 kg");
+    setVolumeChange("+0%");
+    setWorkouts("0");
+    setWorkoutsChange("+0");
+    setStreak("0 Tage");
+    setPrs("0");
+    setPrsChange("+0");
+    toast.success("Fortschritt zurückgesetzt");
+  };
+
   return (
     <div className="pb-24 space-y-6">
-      <h2 className="text-2xl font-bold">Fortschritt</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Fortschritt</h2>
+        <Button onClick={resetProgress} size="sm" variant="outline">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          Zurücksetzen
+        </Button>
+      </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 gap-4">
         <MetricCard
           icon={<TrendingUp className="w-5 h-5" />}
           label="Gesamtvolumen"
-          value="12.450 kg"
-          change="+8%"
+          value={totalVolume}
+          change={volumeChange}
         />
         <MetricCard
           icon={<Activity className="w-5 h-5" />}
           label="Trainings"
-          value="23"
-          change="+3"
+          value={workouts}
+          change={workoutsChange}
         />
         <MetricCard
           icon={<Flame className="w-5 h-5" />}
           label="Serie"
-          value="7 Tage"
+          value={streak}
           change="🔥"
         />
         <MetricCard
           icon={<Award className="w-5 h-5" />}
           label="PRs erreicht"
-          value="5"
-          change="+2"
+          value={prs}
+          change={prsChange}
         />
       </div>
 

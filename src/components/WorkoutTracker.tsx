@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -163,14 +163,26 @@ const WorkoutTracker = () => {
     toast.success(`Training abgeschlossen! ${completedSets}/${totalSets} Sätze beendet`);
   };
 
+  const resetWorkout = () => {
+    setExercises([]);
+    toast.success("Training zurückgesetzt");
+  };
+
   return (
     <div className="pb-24 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Training</h2>
-        <Button onClick={() => setShowExerciseSelect(!showExerciseSelect)} size="sm" className="glow-neon">
-          <Plus className="w-4 h-4 mr-2" />
-          Übung hinzufügen
-        </Button>
+        <div className="flex gap-2">
+          {exercises.length > 0 && (
+            <Button onClick={resetWorkout} size="sm" variant="outline">
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+          )}
+          <Button onClick={() => setShowExerciseSelect(!showExerciseSelect)} size="sm" className="glow-neon">
+            <Plus className="w-4 h-4 mr-2" />
+            Übung hinzufügen
+          </Button>
+        </div>
       </div>
 
       {showExerciseSelect && (
