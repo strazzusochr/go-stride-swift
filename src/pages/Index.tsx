@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { Dumbbell, TrendingUp, Utensils, Timer, Target, Award, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Dumbbell, TrendingUp, Utensils, Timer, Target, Award, Calendar, BookOpen, Heart, LogOut, Layout } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { auth } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import WorkoutTracker from "@/components/WorkoutTracker";
@@ -7,11 +10,37 @@ import ProgressDashboard from "@/components/ProgressDashboard";
 import NutritionPlanner from "@/components/NutritionPlanner";
 import Stopwatch from "@/components/Stopwatch";
 import WorkoutHistory from "@/components/WorkoutHistory";
+import ExerciseDatabase from "@/components/ExerciseDatabase";
+import RecoveryTracker from "@/components/RecoveryTracker";
+import TemplateManager from "@/components/TemplateManager";
 
-type Tab = "home" | "workout" | "progress" | "nutrition" | "history";
+type Tab = "home" | "workout" | "progress" | "nutrition" | "history" | "exercises" | "recovery" | "templates";
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>("home");
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth");
+    }
+  }, [user, loading, navigate]);
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate("/auth");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Lädt...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -25,7 +54,10 @@ const Index = () => {
               </div>
               <h1 className="text-2xl font-bold text-neon">IronReign</h1>
             </div>
-            <p className="text-sm text-muted-foreground hidden sm:block">Pro Edition</p>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Abmelden</span>
+            </Button>
           </div>
         </div>
       </header>
@@ -37,12 +69,15 @@ const Index = () => {
         {activeTab === "progress" && <ProgressDashboard />}
         {activeTab === "nutrition" && <NutritionPlanner />}
         {activeTab === "history" && <WorkoutHistory />}
+        {activeTab === "exercises" && <ExerciseDatabase />}
+        {activeTab === "recovery" && <RecoveryTracker />}
+        {activeTab === "templates" && <TemplateManager />}
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border overflow-x-auto">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-5 gap-1 py-3">
+          <div className="flex gap-1 py-3 min-w-max md:grid md:grid-cols-8">
             <NavButton
               icon={<Dumbbell className="w-5 h-5" />}
               label="Start"
@@ -72,6 +107,24 @@ const Index = () => {
               label="Ernährung"
               active={activeTab === "nutrition"}
               onClick={() => setActiveTab("nutrition")}
+            />
+            <NavButton
+              icon={<BookOpen className="w-5 h-5" />}
+              label="Übungen"
+              active={activeTab === "exercises"}
+              onClick={() => setActiveTab("exercises")}
+            />
+            <NavButton
+              icon={<Heart className="w-5 h-5" />}
+              label="Recovery"
+              active={activeTab === "recovery"}
+              onClick={() => setActiveTab("recovery")}
+            />
+            <NavButton
+              icon={<Layout className="w-5 h-5" />}
+              label="Templates"
+              active={activeTab === "templates"}
+              onClick={() => setActiveTab("templates")}
             />
           </div>
         </div>
