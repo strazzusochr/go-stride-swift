@@ -30,6 +30,7 @@ export type Database = {
             | null
           technique_cues: string[] | null
           video_url: string | null
+          zone_id: string | null
         }
         Insert: {
           contraindications?: string[] | null
@@ -46,6 +47,7 @@ export type Database = {
             | null
           technique_cues?: string[] | null
           video_url?: string | null
+          zone_id?: string | null
         }
         Update: {
           contraindications?: string[] | null
@@ -62,6 +64,7 @@ export type Database = {
             | null
           technique_cues?: string[] | null
           video_url?: string | null
+          zone_id?: string | null
         }
         Relationships: [
           {
@@ -69,6 +72,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercises_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
             referencedColumns: ["id"]
           },
         ]
@@ -228,6 +238,7 @@ export type Database = {
           technique_note: string | null
           tempo: string | null
           weight: number | null
+          zone_id: string | null
         }
         Insert: {
           completed?: boolean | null
@@ -245,6 +256,7 @@ export type Database = {
           technique_note?: string | null
           tempo?: string | null
           weight?: number | null
+          zone_id?: string | null
         }
         Update: {
           completed?: boolean | null
@@ -262,6 +274,7 @@ export type Database = {
           technique_note?: string | null
           tempo?: string | null
           weight?: number | null
+          zone_id?: string | null
         }
         Relationships: [
           {
@@ -276,6 +289,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "workout_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "set_entries_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
             referencedColumns: ["id"]
           },
         ]
@@ -467,6 +487,62 @@ export type Database = {
           },
         ]
       }
+      zone_targets: {
+        Row: {
+          created_at: string | null
+          id: string
+          weekly_sets_high: number
+          weekly_sets_low: number
+          zone_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          weekly_sets_high?: number
+          weekly_sets_low?: number
+          zone_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          weekly_sets_high?: number
+          weekly_sets_low?: number
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zone_targets_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: true
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zones: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          key: Database["public"]["Enums"]["zone_key"]
+          name: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          key: Database["public"]["Enums"]["zone_key"]
+          name: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          key?: Database["public"]["Enums"]["zone_key"]
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -532,6 +608,37 @@ export type Database = {
         | "push_pull_legs"
         | "bro_split"
         | "custom"
+      zone_key:
+        | "brust_total"
+        | "ruecken_oben"
+        | "ruecken_unten"
+        | "latissimus"
+        | "delts_vorne"
+        | "delts_seite"
+        | "delts_hinten"
+        | "trapez"
+        | "bizeps"
+        | "trizeps"
+        | "unterarme"
+        | "bauch_gerade"
+        | "bauch_schraeg"
+        | "core_tief"
+        | "hueftbeuger"
+        | "gluteus"
+        | "quadrizeps"
+        | "hamstrings"
+        | "waden"
+        | "addukt_abdukt"
+        | "brust_oben"
+        | "brust_unten"
+        | "teres_major"
+        | "rhomboiden"
+        | "rotatorenmanschette"
+        | "trapez_unten"
+        | "serratus"
+        | "quadratus_lumborum"
+        | "tibialis_anterior"
+        | "hueft_aussenrotatoren"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -714,6 +821,38 @@ export const Constants = {
         "push_pull_legs",
         "bro_split",
         "custom",
+      ],
+      zone_key: [
+        "brust_total",
+        "ruecken_oben",
+        "ruecken_unten",
+        "latissimus",
+        "delts_vorne",
+        "delts_seite",
+        "delts_hinten",
+        "trapez",
+        "bizeps",
+        "trizeps",
+        "unterarme",
+        "bauch_gerade",
+        "bauch_schraeg",
+        "core_tief",
+        "hueftbeuger",
+        "gluteus",
+        "quadrizeps",
+        "hamstrings",
+        "waden",
+        "addukt_abdukt",
+        "brust_oben",
+        "brust_unten",
+        "teres_major",
+        "rhomboiden",
+        "rotatorenmanschette",
+        "trapez_unten",
+        "serratus",
+        "quadratus_lumborum",
+        "tibialis_anterior",
+        "hueft_aussenrotatoren",
       ],
     },
   },
