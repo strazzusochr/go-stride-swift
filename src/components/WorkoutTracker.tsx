@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Exercise {
   id: string;
@@ -18,18 +20,78 @@ interface Set {
   completed: boolean;
 }
 
-const EXERCISE_LIBRARY = [
-  "Bankdrücken Langhantel",
-  "Kniebeugen",
-  "Kreuzheben",
-  "Überkopfdrücken",
-  "Langhantelrudern",
-  "Klimmzüge",
-  "Kurzhantel Curls",
-  "Trizeps Dips",
-  "Beinpresse",
-  "Rumänisches Kreuzheben",
-];
+const EXERCISE_LIBRARY = {
+  "Brust": [
+    "Bankdrücken Langhantel",
+    "Bankdrücken Kurzhantel",
+    "Schrägbankdrücken",
+    "Fliegende Kurzhantel",
+    "Butterfly",
+    "Dips (Brust)",
+  ],
+  "Rücken": [
+    "Klimmzüge breit",
+    "Klimmzüge eng",
+    "Langhantelrudern",
+    "Kurzhantelrudern einarmig",
+    "T-Bar Rudern",
+    "Latzug breit",
+    "Latzug eng",
+    "Kreuzheben",
+    "Rumänisches Kreuzheben",
+    "Hyperextensions",
+  ],
+  "Schultern": [
+    "Überkopfdrücken Langhantel",
+    "Schulterdrücken Kurzhantel",
+    "Seitheben",
+    "Frontheben",
+    "Facepulls",
+    "Reverse Flys",
+    "Arnold Press",
+  ],
+  "Nacken/Trapez": [
+    "Shrugs Langhantel",
+    "Shrugs Kurzhantel",
+    "Nackenziehen",
+  ],
+  "Arme": [
+    "Bizeps Curls Langhantel",
+    "Bizeps Curls Kurzhantel",
+    "Hammercurls",
+    "Konzentrationscurls",
+    "Trizeps Dips",
+    "Trizepsdrücken am Kabel",
+    "French Press",
+    "Kickbacks",
+    "Unterarm Curls",
+    "Reverse Curls",
+  ],
+  "Bauch/Core": [
+    "Crunches",
+    "Beinheben hängend",
+    "Planks",
+    "Side Planks",
+    "Russian Twists",
+    "Cable Crunches",
+    "Ab Wheel Rollouts",
+  ],
+  "Beine": [
+    "Kniebeugen",
+    "Front Squats",
+    "Beinpresse",
+    "Ausfallschritte",
+    "Beinstrecker",
+    "Beinbeuger liegend",
+    "Beinbeuger sitzend",
+    "Wadenheben stehend",
+    "Wadenheben sitzend",
+    "Hip Thrusts",
+    "Bulgarian Split Squats",
+    "Adduktoren",
+    "Abduktoren",
+  ],
+};
 
 const WorkoutTracker = () => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -113,20 +175,40 @@ const WorkoutTracker = () => {
 
       {showExerciseSelect && (
         <Card className="p-4 bg-secondary border-accent/20">
-          <h3 className="font-bold mb-3 text-sm text-muted-foreground">Übung auswählen</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {EXERCISE_LIBRARY.map((exercise) => (
-              <Button
-                key={exercise}
-                variant="secondary"
-                size="sm"
-                onClick={() => addExercise(exercise)}
-                className="text-xs"
-              >
-                {exercise}
-              </Button>
-            ))}
-          </div>
+          <h3 className="font-bold mb-3 text-sm text-muted-foreground">Übung nach Muskelgruppe auswählen</h3>
+          <Tabs defaultValue="Brust" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
+              <TabsTrigger value="Brust">Brust</TabsTrigger>
+              <TabsTrigger value="Rücken">Rücken</TabsTrigger>
+              <TabsTrigger value="Schultern">Schultern</TabsTrigger>
+              <TabsTrigger value="Nacken/Trapez">Nacken</TabsTrigger>
+            </TabsList>
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsTrigger value="Arme">Arme</TabsTrigger>
+              <TabsTrigger value="Bauch/Core">Bauch</TabsTrigger>
+              <TabsTrigger value="Beine">Beine</TabsTrigger>
+            </TabsList>
+            
+            <ScrollArea className="h-[300px] w-full pr-4">
+              {Object.entries(EXERCISE_LIBRARY).map(([group, exercises]) => (
+                <TabsContent key={group} value={group} className="mt-0">
+                  <div className="grid grid-cols-2 gap-2">
+                    {exercises.map((exercise) => (
+                      <Button
+                        key={exercise}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => addExercise(exercise)}
+                        className="text-xs h-auto py-2 px-3"
+                      >
+                        {exercise}
+                      </Button>
+                    ))}
+                  </div>
+                </TabsContent>
+              ))}
+            </ScrollArea>
+          </Tabs>
         </Card>
       )}
 
