@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Play, Plus, Save, X, Dumbbell, Clock } from "lucide-react";
+import { Play, Plus, Save, Dumbbell, Clock } from "lucide-react";
 import ExercisePicker from "./ExercisePicker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
