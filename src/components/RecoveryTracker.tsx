@@ -8,8 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
-import { Heart, Moon, Zap, Activity, Save } from "lucide-react";
+import { Heart, Moon, Zap, Activity, Save, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface RecoveryLog {
   id: string;
@@ -26,6 +37,7 @@ export default function RecoveryTracker() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [todayLog, setTodayLog] = useState<RecoveryLog | null>(null);
+  const [hasLogs, setHasLogs] = useState(false);
   
   // Form state
   const [sleepHours, setSleepHours] = useState<number>(7);
@@ -38,8 +50,23 @@ export default function RecoveryTracker() {
   useEffect(() => {
     if (user) {
       loadTodayLog();
+      checkForLogs();
     }
   }, [user]);
+
+  const checkForLogs = async () => {
+    try {
+      const { count, error } = await supabase
+        .from("recovery_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+      setHasLogs((count || 0) > 0);
+    } catch (error: any) {
+      console.error(error);
+    }
+  };
 
   const loadTodayLog = async () => {
     try {
@@ -103,6 +130,7 @@ export default function RecoveryTracker() {
 
       toast({ title: "Erfolg", description: "Recovery-Daten gespeichert!" });
       loadTodayLog();
+      checkForLogs();
     } catch (error: any) {
       toast({ title: "Fehler", description: error.message, variant: "destructive" });
     } finally {
@@ -110,11 +138,58 @@ export default function RecoveryTracker() {
     }
   };
 
+  const deleteAllLogs = async () => {
+    try {
+      const { error } = await supabase
+        .from("recovery_logs")
+        .delete()
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+
+      toast({ title: "Alle Recovery-Logs gelöscht" });
+      setHasLogs(false);
+      setTodayLog(null);
+    } catch (error: any) {
+      toast({ 
+        title: "Fehler", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20">
-      <div className="flex items-center gap-2">
-        <Heart className="h-6 w-6 text-primary" />
-        <h2 className="text-2xl font-bold">Recovery Tracking</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Heart className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-bold">Recovery Tracking</h2>
+        </div>
+        {hasLogs && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Alle Logs löschen
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Recovery-Logs löschen?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Dies wird alle Recovery-Logs permanent löschen. Diese Aktion kann nicht rückgängig gemacht werden.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteAllLogs}>
+                  Löschen
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       <Card>

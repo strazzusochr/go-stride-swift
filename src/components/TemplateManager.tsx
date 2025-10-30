@@ -6,7 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Layout, Plus, Dumbbell, Calendar } from "lucide-react";
+import { Layout, Plus, Dumbbell, Calendar, RotateCcw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface WorkoutTemplate {
   id: string;
@@ -47,6 +58,26 @@ export default function TemplateManager() {
     }
   };
 
+  const deleteAllTemplates = async () => {
+    try {
+      const { error } = await supabase
+        .from("workout_templates")
+        .delete()
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+
+      toast({ title: "Alle Templates gelöscht" });
+      setTemplates([]);
+    } catch (error: any) {
+      toast({ 
+        title: "Fehler", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    }
+  };
+
   const getSplitLabel = (splitType: string) => {
     const labels: Record<string, string> = {
       full_body: "Ganzkörper",
@@ -83,10 +114,37 @@ export default function TemplateManager() {
           <Layout className="h-6 w-6 text-primary" />
           <h2 className="text-2xl font-bold">Trainings-Templates</h2>
         </div>
-        <Button size="sm">
-          <Plus className="w-4 h-4 mr-2" />
-          Neu
-        </Button>
+        <div className="flex gap-2">
+          {templates.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Alle löschen
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Alle Templates löschen?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Dies wird alle {templates.length} Workout-Templates permanent löschen. 
+                    Diese Aktion kann nicht rückgängig gemacht werden.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction onClick={deleteAllTemplates}>
+                    Löschen
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          <Button size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            Neu
+          </Button>
+        </div>
       </div>
 
       {templates.length === 0 ? (

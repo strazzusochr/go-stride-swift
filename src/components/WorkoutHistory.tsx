@@ -1,11 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Calendar, Clock, Dumbbell } from "lucide-react";
+import { Calendar, Clock, Dumbbell, RotateCcw } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function WorkoutHistory() {
+  const queryClient = useQueryClient();
+  
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["workout_sessions"],
     queryFn: async () => {
@@ -30,6 +45,24 @@ export default function WorkoutHistory() {
     },
   });
 
+  const deleteAllSessionsMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("workout_sessions")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workout_sessions"] });
+      toast({ title: "Gesamter Workout-Verlauf gelöscht" });
+    },
+  });
+
   if (isLoading) {
     return <div className="text-center py-8">Lädt...</div>;
   }
@@ -50,7 +83,34 @@ export default function WorkoutHistory() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Workout-Verlauf</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Workout-Verlauf</h2>
+        {sessions && sessions.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Verlauf löschen
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Gesamten Verlauf löschen?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Dies wird alle {sessions.length} Workout-Sessions und alle zugehörigen Sätze permanent löschen. 
+                  Diese Aktion kann nicht rückgängig gemacht werden.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                <AlertDialogAction onClick={() => deleteAllSessionsMutation.mutate()}>
+                  Löschen
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
       <Accordion type="single" collapsible className="space-y-4">
         {sessions.map((session) => {
           const exerciseGroups = session.set_entries.reduce((acc, set) => {

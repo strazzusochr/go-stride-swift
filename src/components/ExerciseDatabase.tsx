@@ -4,9 +4,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Dumbbell } from "lucide-react";
+import { Search, Dumbbell, RotateCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Exercise {
   id: string;
@@ -17,6 +29,8 @@ interface Exercise {
   difficulty: string;
   technique_cues: string[];
   contraindications: string[];
+  is_custom: boolean;
+  created_by: string | null;
 }
 
 export default function ExerciseDatabase() {
@@ -35,7 +49,6 @@ export default function ExerciseDatabase() {
       const { data, error } = await supabase
         .from("exercises")
         .select("*")
-        .eq("is_custom", false)
         .order("name");
 
       if (error) throw error;
@@ -47,12 +60,38 @@ export default function ExerciseDatabase() {
     }
   };
 
+  const deleteCustomExercises = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("exercises")
+        .delete()
+        .eq("created_by", user.id)
+        .eq("is_custom", true);
+
+      if (error) throw error;
+
+      toast({ title: "Alle benutzerdefinierten Übungen gelöscht" });
+      loadExercises();
+    } catch (error: any) {
+      toast({ 
+        title: "Fehler", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    }
+  };
+
   const filteredExercises = exercises.filter((ex) => {
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase());
     const matchesMuscle = muscleFilter === "all" || ex.primary_muscle === muscleFilter;
     const matchesEquipment = equipmentFilter === "all" || ex.equipment === equipmentFilter;
     return matchesSearch && matchesMuscle && matchesEquipment;
   });
+
+  const customExercisesCount = exercises.filter(e => e.is_custom && e.created_by).length;
 
   const muscleGroups = Array.from(new Set(exercises.map((ex) => ex.primary_muscle))).sort();
   const equipmentTypes = Array.from(new Set(exercises.map((ex) => ex.equipment))).sort();
@@ -112,9 +151,36 @@ export default function ExerciseDatabase() {
 
   return (
     <div className="space-y-4 pb-20">
-      <div className="flex items-center gap-2">
-        <Dumbbell className="h-6 w-6 text-primary" />
-        <h2 className="text-2xl font-bold">Übungsdatenbank</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Dumbbell className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-bold">Übungsdatenbank</h2>
+        </div>
+        {customExercisesCount > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Custom Reset ({customExercisesCount})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Benutzerdefinierte Übungen löschen?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Dies wird alle {customExercisesCount} benutzerdefinierten Übungen permanent löschen. 
+                  Diese Aktion kann nicht rückgängig gemacht werden.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteCustomExercises}>
+                  Löschen
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

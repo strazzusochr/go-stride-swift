@@ -1,10 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Dumbbell, Target, Award } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, Dumbbell, Target, Award, RotateCcw } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ProgressDashboard() {
+  const queryClient = useQueryClient();
+  
   const { data: userData } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
@@ -90,6 +105,23 @@ export default function ProgressDashboard() {
     enabled: !!user?.id,
   });
 
+  const deleteAllPRsMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("personal_records")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["progress_stats"] });
+      toast({ title: "Alle persönlichen Rekorde gelöscht" });
+    },
+  });
+
   if (!stats) {
     return <div className="text-center py-8">Lädt...</div>;
   }
@@ -134,10 +166,35 @@ export default function ProgressDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5" />
-            Persönliche Bestleistungen (PRs)
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5" />
+              Persönliche Bestleistungen (PRs)
+            </CardTitle>
+            {stats.personalRecords && stats.personalRecords.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Alle PRs löschen?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Dies wird alle persönlichen Rekorde permanent löschen. Diese Aktion kann nicht rückgängig gemacht werden.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteAllPRsMutation.mutate()}>
+                      Löschen
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {stats.personalRecords && stats.personalRecords.length > 0 ? (
