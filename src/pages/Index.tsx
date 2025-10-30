@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Dumbbell, TrendingUp, Utensils, Timer, Target, Award } from "lucide-react";
+import { Dumbbell, TrendingUp, Utensils, Timer, Target, Award, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import WorkoutTracker from "@/components/WorkoutTracker";
 import ProgressDashboard from "@/components/ProgressDashboard";
 import NutritionPlanner from "@/components/NutritionPlanner";
 import Stopwatch from "@/components/Stopwatch";
+import WorkoutHistory from "@/components/WorkoutHistory";
 
-type Tab = "home" | "workout" | "progress" | "nutrition";
+type Tab = "home" | "workout" | "progress" | "nutrition" | "history";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -35,12 +36,13 @@ const Index = () => {
         {activeTab === "workout" && <WorkoutTracker />}
         {activeTab === "progress" && <ProgressDashboard />}
         {activeTab === "nutrition" && <NutritionPlanner />}
+        {activeTab === "history" && <WorkoutHistory />}
       </main>
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-4 gap-2 py-3">
+          <div className="grid grid-cols-5 gap-1 py-3">
             <NavButton
               icon={<Dumbbell className="w-5 h-5" />}
               label="Start"
@@ -52,6 +54,12 @@ const Index = () => {
               label="Training"
               active={activeTab === "workout"}
               onClick={() => setActiveTab("workout")}
+            />
+            <NavButton
+              icon={<Calendar className="w-5 h-5" />}
+              label="Kalender"
+              active={activeTab === "history"}
+              onClick={() => setActiveTab("history")}
             />
             <NavButton
               icon={<TrendingUp className="w-5 h-5" />}

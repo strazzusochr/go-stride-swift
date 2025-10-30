@@ -1,11 +1,18 @@
-import { useState } from "react";
-import { Plus, Trash2, Check, RotateCcw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Check, RotateCcw, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
+import { z } from "zod";
+
+const workoutSchema = z.object({
+  reps: z.number().int().min(1, "Mindestens 1 Wiederholung").max(500, "Maximum 500 Wiederholungen"),
+  weight: z.number().min(0, "Gewicht muss positiv sein").max(1000, "Maximum 1000 kg"),
+});
 
 interface Exercise {
   id: string;
@@ -18,6 +25,20 @@ interface Set {
   reps: number;
   weight: number;
   completed: boolean;
+}
+
+interface WorkoutSession {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  exercises: {
+    name: string;
+    sets: { reps: number; weight: number; completed: boolean }[];
+  }[];
+  totalSets: number;
+  completedSets: number;
+  totalVolume: number;
 }
 
 const EXERCISE_LIBRARY = {
@@ -96,6 +117,32 @@ const EXERCISE_LIBRARY = {
 const WorkoutTracker = () => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [showExerciseSelect, setShowExerciseSelect] = useState(false);
+  const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Start workout timer when first exercise is added
+  useEffect(() => {
+    if (exercises.length > 0 && !workoutStartTime) {
+      setWorkoutStartTime(new Date());
+    }
+  }, [exercises.length, workoutStartTime]);
+
+  // Update current time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getWorkoutDuration = () => {
+    if (!workoutStartTime) return "00:00:00";
+    const diff = currentTime.getTime() - workoutStartTime.getTime();
+    const hours = Math.floor(diff / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   const addExercise = (name: string) => {
     const newExercise: Exercise = {
@@ -122,6 +169,14 @@ const WorkoutTracker = () => {
   };
 
   const updateSet = (exerciseId: string, setId: string, field: "reps" | "weight", value: number) => {
+    // Validate the input
+    const result = workoutSchema.shape[field].safeParse(value);
+    
+    if (!result.success) {
+      toast.error(result.error.errors[0].message);
+      return;
+    }
+
     setExercises(
       exercises.map((ex) =>
         ex.id === exerciseId
@@ -155,16 +210,52 @@ const WorkoutTracker = () => {
   };
 
   const finishWorkout = () => {
+    if (!workoutStartTime) return;
+
     const totalSets = exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
     const completedSets = exercises.reduce(
       (sum, ex) => sum + ex.sets.filter((s) => s.completed).length,
       0
     );
-    toast.success(`Training abgeschlossen! ${completedSets}/${totalSets} Sätze beendet`);
+
+    // Calculate total volume
+    const totalVolume = exercises.reduce((sum, ex) => {
+      return sum + ex.sets.reduce((setSum, set) => {
+        return setSum + (set.completed ? set.reps * set.weight : 0);
+      }, 0);
+    }, 0);
+
+    // Save workout to history
+    const workoutSession: WorkoutSession = {
+      id: Date.now().toString(),
+      date: format(workoutStartTime, "yyyy-MM-dd"),
+      startTime: format(workoutStartTime, "HH:mm"),
+      endTime: format(new Date(), "HH:mm"),
+      exercises: exercises.map(ex => ({
+        name: ex.name,
+        sets: ex.sets.map(s => ({ reps: s.reps, weight: s.weight, completed: s.completed }))
+      })),
+      totalSets,
+      completedSets,
+      totalVolume,
+    };
+
+    // Load existing history and add new workout
+    const stored = localStorage.getItem("workoutHistory");
+    const history: WorkoutSession[] = stored ? JSON.parse(stored) : [];
+    history.push(workoutSession);
+    localStorage.setItem("workoutHistory", JSON.stringify(history));
+
+    toast.success(`Training gespeichert! ${completedSets}/${totalSets} Sätze, ${totalVolume}kg Volumen`);
+    
+    // Reset workout
+    setExercises([]);
+    setWorkoutStartTime(null);
   };
 
   const resetWorkout = () => {
     setExercises([]);
+    setWorkoutStartTime(null);
     toast.success("Training zurückgesetzt");
   };
 
@@ -184,6 +275,24 @@ const WorkoutTracker = () => {
           </Button>
         </div>
       </div>
+
+      {/* Workout Timer */}
+      {workoutStartTime && exercises.length > 0 && (
+        <Card className="p-4 bg-gradient-metal border-accent/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              <span className="text-sm text-muted-foreground">Trainingsdauer</span>
+            </div>
+            <div className="text-2xl font-bold font-mono text-neon">
+              {getWorkoutDuration()}
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            Gestartet um {format(workoutStartTime, "HH:mm")} Uhr
+          </div>
+        </Card>
+      )}
 
       {showExerciseSelect && (
         <Card className="p-4 bg-secondary border-accent/20">
@@ -251,6 +360,8 @@ const WorkoutTracker = () => {
                     <Input
                       type="number"
                       placeholder="Wdh"
+                      min="1"
+                      max="500"
                       value={set.reps || ""}
                       onChange={(e) =>
                         updateSet(exercise.id, set.id, "reps", parseInt(e.target.value) || 0)
@@ -261,9 +372,12 @@ const WorkoutTracker = () => {
                     <Input
                       type="number"
                       placeholder="kg"
+                      min="0"
+                      max="1000"
+                      step="0.5"
                       value={set.weight || ""}
                       onChange={(e) =>
-                        updateSet(exercise.id, set.id, "weight", parseInt(e.target.value) || 0)
+                        updateSet(exercise.id, set.id, "weight", parseFloat(e.target.value) || 0)
                       }
                       className="w-24 text-center"
                     />
