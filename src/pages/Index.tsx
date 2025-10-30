@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import WorkoutTracker from "@/components/WorkoutTracker";
 import ProgressDashboard from "@/components/ProgressDashboard";
 import NutritionPlanner from "@/components/NutritionPlanner";
+import Stopwatch from "@/components/Stopwatch";
 
 type Tab = "home" | "workout" | "progress" | "nutrition";
 
@@ -84,6 +85,9 @@ const HomeView = ({ onNavigate }: { onNavigate: (tab: Tab) => void }) => {
           </Button>
         </div>
       </Card>
+
+      {/* Stopwatch */}
+      <Stopwatch />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4">
