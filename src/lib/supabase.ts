@@ -8,6 +8,7 @@ export type { User, Session };
 export const auth = {
   getSession: () => supabase.auth.getSession(),
   getUser: () => supabase.auth.getUser(),
+  signInAnonymously: () => supabase.auth.signInAnonymously(),
   signUp: async (email: string, password: string, displayName?: string) => {
     return supabase.auth.signUp({
       email,

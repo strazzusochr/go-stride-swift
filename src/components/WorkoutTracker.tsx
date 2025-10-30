@@ -1,416 +1,424 @@
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Check, RotateCcw, Clock } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
-import { z } from "zod";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
+import { Play, Square, Plus, Trash2, Timer } from "lucide-react";
+import Stopwatch from "./Stopwatch";
 
-const workoutSchema = z.object({
-  reps: z.number().int().min(1, "Mindestens 1 Wiederholung").max(500, "Maximum 500 Wiederholungen"),
-  weight: z.number().min(0, "Gewicht muss positiv sein").max(1000, "Maximum 1000 kg"),
-});
-
-interface Exercise {
-  id: string;
-  name: string;
-  sets: Set[];
-}
-
-interface Set {
-  id: string;
-  reps: number;
-  weight: number;
+interface WorkoutSet {
+  id?: string;
+  exercise_id: string;
+  exercise_name: string;
+  set_number: number;
+  set_type: string;
+  reps: number | null;
+  weight: number | null;
+  rpe: number | null;
+  rir: number | null;
+  tempo: string | null;
+  rest_planned_sec: number | null;
+  rest_actual_sec: number | null;
   completed: boolean;
 }
 
-interface WorkoutSession {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  exercises: {
-    name: string;
-    sets: { reps: number; weight: number; completed: boolean }[];
-  }[];
-  totalSets: number;
-  completedSets: number;
-  totalVolume: number;
-}
+export default function WorkoutTracker() {
+  const queryClient = useQueryClient();
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sets, setSets] = useState<WorkoutSet[]>([]);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string>("");
+  const [notes, setNotes] = useState("");
+  const [currentRestTimer, setCurrentRestTimer] = useState<number | null>(null);
 
-const EXERCISE_LIBRARY = {
-  "Brust": [
-    "Bankdrücken Langhantel",
-    "Bankdrücken Kurzhantel",
-    "Schrägbankdrücken",
-    "Fliegende Kurzhantel",
-    "Butterfly",
-    "Dips (Brust)",
-  ],
-  "Rücken": [
-    "Klimmzüge breit",
-    "Klimmzüge eng",
-    "Langhantelrudern",
-    "Kurzhantelrudern einarmig",
-    "T-Bar Rudern",
-    "Latzug breit",
-    "Latzug eng",
-    "Kreuzheben",
-    "Rumänisches Kreuzheben",
-    "Hyperextensions",
-  ],
-  "Schultern": [
-    "Überkopfdrücken Langhantel",
-    "Schulterdrücken Kurzhantel",
-    "Seitheben",
-    "Frontheben",
-    "Facepulls",
-    "Reverse Flys",
-    "Arnold Press",
-  ],
-  "Nacken/Trapez": [
-    "Shrugs Langhantel",
-    "Shrugs Kurzhantel",
-    "Nackenziehen",
-  ],
-  "Arme": [
-    "Bizeps Curls Langhantel",
-    "Bizeps Curls Kurzhantel",
-    "Hammercurls",
-    "Konzentrationscurls",
-    "Trizeps Dips",
-    "Trizepsdrücken am Kabel",
-    "French Press",
-    "Kickbacks",
-    "Unterarm Curls",
-    "Reverse Curls",
-  ],
-  "Bauch/Core": [
-    "Crunches",
-    "Beinheben hängend",
-    "Planks",
-    "Side Planks",
-    "Russian Twists",
-    "Cable Crunches",
-    "Ab Wheel Rollouts",
-  ],
-  "Beine": [
-    "Kniebeugen",
-    "Front Squats",
-    "Beinpresse",
-    "Ausfallschritte",
-    "Beinstrecker",
-    "Beinbeuger liegend",
-    "Beinbeuger sitzend",
-    "Wadenheben stehend",
-    "Wadenheben sitzend",
-    "Hip Thrusts",
-    "Bulgarian Split Squats",
-    "Adduktoren",
-    "Abduktoren",
-  ],
-};
+  const { data: exercises } = useQuery({
+    queryKey: ["exercises"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exercises")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
 
-const WorkoutTracker = () => {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [showExerciseSelect, setShowExerciseSelect] = useState(false);
-  const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const startWorkoutMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-  // Start workout timer when first exercise is added
-  useEffect(() => {
-    if (exercises.length > 0 && !workoutStartTime) {
-      setWorkoutStartTime(new Date());
-    }
-  }, [exercises.length, workoutStartTime]);
+      const { data, error } = await supabase
+        .from("workout_sessions")
+        .insert({
+          user_id: user.id,
+          date: new Date().toISOString().split("T")[0],
+          start_time: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-  // Update current time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setSessionId(data.id);
+      toast({ title: "Workout gestartet!" });
+    },
+  });
 
-  const getWorkoutDuration = () => {
-    if (!workoutStartTime) return "00:00:00";
-    const diff = currentTime.getTime() - workoutStartTime.getTime();
-    const hours = Math.floor(diff / 3600000);
-    const minutes = Math.floor((diff % 3600000) / 60000);
-    const seconds = Math.floor((diff % 60000) / 1000);
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
+  const endWorkoutMutation = useMutation({
+    mutationFn: async () => {
+      if (!sessionId) throw new Error("No active session");
 
-  const addExercise = (name: string) => {
-    const newExercise: Exercise = {
-      id: Date.now().toString(),
-      name,
-      sets: [{ id: Date.now().toString(), reps: 0, weight: 0, completed: false }],
-    };
-    setExercises([...exercises, newExercise]);
-    setShowExerciseSelect(false);
-    toast.success(`${name} hinzugefügt`);
-  };
+      const { error } = await supabase
+        .from("workout_sessions")
+        .update({
+          end_time: new Date().toISOString(),
+          notes,
+        })
+        .eq("id", sessionId);
 
-  const addSet = (exerciseId: string) => {
-    setExercises(
-      exercises.map((ex) =>
-        ex.id === exerciseId
-          ? {
-              ...ex,
-              sets: [...ex.sets, { id: Date.now().toString(), reps: 0, weight: 0, completed: false }],
-            }
-          : ex
-      )
-    );
-  };
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Workout beendet!" });
+      setSessionId(null);
+      setSets([]);
+      setNotes("");
+      queryClient.invalidateQueries({ queryKey: ["workout_sessions"] });
+    },
+  });
 
-  const updateSet = (exerciseId: string, setId: string, field: "reps" | "weight", value: number) => {
-    // Validate the input
-    const result = workoutSchema.shape[field].safeParse(value);
-    
-    if (!result.success) {
-      toast.error(result.error.errors[0].message);
+  const saveSetMutation = useMutation({
+    mutationFn: async (set: WorkoutSet) => {
+      if (!sessionId) throw new Error("No active session");
+
+      const insertData: any = {
+        session_id: sessionId,
+        exercise_id: set.exercise_id,
+        set_number: set.set_number,
+        set_type: set.set_type || "normal",
+        reps: set.reps,
+        weight: set.weight,
+        rpe: set.rpe,
+        rir: set.rir,
+        tempo: set.tempo,
+        rest_planned_sec: set.rest_planned_sec,
+        rest_actual_sec: set.rest_actual_sec,
+        completed: set.completed,
+      };
+
+      const { error } = await supabase.from("set_entries").insert(insertData);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Satz gespeichert!" });
+    },
+  });
+
+  const addExercise = () => {
+    if (!selectedExerciseId) {
+      toast({ title: "Fehler", description: "Bitte wähle eine Übung", variant: "destructive" });
       return;
     }
 
-    setExercises(
-      exercises.map((ex) =>
-        ex.id === exerciseId
-          ? {
-              ...ex,
-              sets: ex.sets.map((set) => (set.id === setId ? { ...set, [field]: value } : set)),
-            }
-          : ex
-      )
-    );
-  };
+    const exercise = exercises?.find((e) => e.id === selectedExerciseId);
+    if (!exercise) return;
 
-  const toggleSetComplete = (exerciseId: string, setId: string) => {
-    setExercises(
-      exercises.map((ex) =>
-        ex.id === exerciseId
-          ? {
-              ...ex,
-              sets: ex.sets.map((set) =>
-                set.id === setId ? { ...set, completed: !set.completed } : set
-              ),
-            }
-          : ex
-      )
-    );
-  };
-
-  const deleteExercise = (exerciseId: string) => {
-    setExercises(exercises.filter((ex) => ex.id !== exerciseId));
-    toast.success("Übung entfernt");
-  };
-
-  const finishWorkout = () => {
-    if (!workoutStartTime) return;
-
-    const totalSets = exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
-    const completedSets = exercises.reduce(
-      (sum, ex) => sum + ex.sets.filter((s) => s.completed).length,
-      0
-    );
-
-    // Calculate total volume
-    const totalVolume = exercises.reduce((sum, ex) => {
-      return sum + ex.sets.reduce((setSum, set) => {
-        return setSum + (set.completed ? set.reps * set.weight : 0);
-      }, 0);
-    }, 0);
-
-    // Save workout to history
-    const workoutSession: WorkoutSession = {
-      id: Date.now().toString(),
-      date: format(workoutStartTime, "yyyy-MM-dd"),
-      startTime: format(workoutStartTime, "HH:mm"),
-      endTime: format(new Date(), "HH:mm"),
-      exercises: exercises.map(ex => ({
-        name: ex.name,
-        sets: ex.sets.map(s => ({ reps: s.reps, weight: s.weight, completed: s.completed }))
-      })),
-      totalSets,
-      completedSets,
-      totalVolume,
+    const newSet: WorkoutSet = {
+      exercise_id: selectedExerciseId,
+      exercise_name: exercise.name,
+      set_number: sets.filter((s) => s.exercise_id === selectedExerciseId).length + 1,
+      set_type: "normal",
+      reps: null,
+      weight: null,
+      rpe: null,
+      rir: null,
+      tempo: null,
+      rest_planned_sec: 120,
+      rest_actual_sec: null,
+      completed: false,
     };
 
-    // Load existing history and add new workout
-    const stored = localStorage.getItem("workoutHistory");
-    const history: WorkoutSession[] = stored ? JSON.parse(stored) : [];
-    history.push(workoutSession);
-    localStorage.setItem("workoutHistory", JSON.stringify(history));
+    setSets([...sets, newSet]);
+  };
 
-    toast.success(`Training gespeichert! ${completedSets}/${totalSets} Sätze, ${totalVolume}kg Volumen`);
+  const updateSet = (index: number, updates: Partial<WorkoutSet>) => {
+    const newSets = [...sets];
+    newSets[index] = { ...newSets[index], ...updates };
+    setSets(newSets);
+  };
+
+  const completeSet = async (index: number) => {
+    const set = sets[index];
+    updateSet(index, { completed: true });
+    await saveSetMutation.mutateAsync({ ...set, completed: true });
     
-    // Reset workout
-    setExercises([]);
-    setWorkoutStartTime(null);
+    // Auto-start rest timer
+    if (set.rest_planned_sec) {
+      setCurrentRestTimer(set.rest_planned_sec);
+    }
   };
 
-  const resetWorkout = () => {
-    setExercises([]);
-    setWorkoutStartTime(null);
-    toast.success("Training zurückgesetzt");
+  const removeSet = (index: number) => {
+    setSets(sets.filter((_, i) => i !== index));
   };
+
+  const groupedSets = sets.reduce((acc, set) => {
+    if (!acc[set.exercise_name]) {
+      acc[set.exercise_name] = [];
+    }
+    acc[set.exercise_name].push(set);
+    return acc;
+  }, {} as Record<string, WorkoutSet[]>);
+
+  if (!sessionId) {
+    return (
+      <div className="text-center py-12">
+        <Play className="h-16 w-16 text-primary mx-auto mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Bereit für dein Workout?</h2>
+        <p className="text-muted-foreground mb-6">
+          Starte ein neues Workout mit erweiterten Tracking-Features
+        </p>
+        <Button size="lg" onClick={() => startWorkoutMutation.mutate()}>
+          <Play className="mr-2 h-5 w-5" />
+          Workout starten
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="pb-24 space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Training</h2>
-        <div className="flex gap-2">
-          {exercises.length > 0 && (
-            <Button onClick={resetWorkout} size="sm" variant="outline">
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-          )}
-          <Button onClick={() => setShowExerciseSelect(!showExerciseSelect)} size="sm" className="glow-neon">
-            <Plus className="w-4 h-4 mr-2" />
-            Übung hinzufügen
-          </Button>
+        <div>
+          <h2 className="text-2xl font-bold">Aktives Workout</h2>
+          <p className="text-sm text-muted-foreground">
+            Session gestartet um {new Date().toLocaleTimeString("de-DE")}
+          </p>
         </div>
+        <Button variant="destructive" onClick={() => endWorkoutMutation.mutate()}>
+          <Square className="mr-2 h-4 w-4" />
+          Beenden
+        </Button>
       </div>
 
-      {/* Workout Timer */}
-      {workoutStartTime && exercises.length > 0 && (
-        <Card className="p-4 bg-gradient-metal border-accent/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              <span className="text-sm text-muted-foreground">Trainingsdauer</span>
-            </div>
-            <div className="text-2xl font-bold font-mono text-neon">
-              {getWorkoutDuration()}
-            </div>
-          </div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            Gestartet um {format(workoutStartTime, "HH:mm")} Uhr
-          </div>
+      {currentRestTimer && (
+        <Card className="bg-primary/10 border-primary">
+          <CardContent className="pt-6">
+            <Stopwatch
+              initialSeconds={currentRestTimer}
+              onComplete={() => setCurrentRestTimer(null)}
+            />
+          </CardContent>
         </Card>
       )}
 
-      {showExerciseSelect && (
-        <Card className="p-4 bg-secondary border-accent/20">
-          <h3 className="font-bold mb-3 text-sm text-muted-foreground">Übung nach Muskelgruppe auswählen</h3>
-          <Tabs defaultValue="Brust" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4">
-              <TabsTrigger value="Brust">Brust</TabsTrigger>
-              <TabsTrigger value="Rücken">Rücken</TabsTrigger>
-              <TabsTrigger value="Schultern">Schultern</TabsTrigger>
-              <TabsTrigger value="Nacken/Trapez">Nacken</TabsTrigger>
-            </TabsList>
-            <TabsList className="grid w-full grid-cols-3 mb-4">
-              <TabsTrigger value="Arme">Arme</TabsTrigger>
-              <TabsTrigger value="Bauch/Core">Bauch</TabsTrigger>
-              <TabsTrigger value="Beine">Beine</TabsTrigger>
-            </TabsList>
-            
-            <ScrollArea className="h-[300px] w-full pr-4">
-              {Object.entries(EXERCISE_LIBRARY).map(([group, exercises]) => (
-                <TabsContent key={group} value={group} className="mt-0">
-                  <div className="grid grid-cols-2 gap-2">
-                    {exercises.map((exercise) => (
-                      <Button
-                        key={exercise}
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => addExercise(exercise)}
-                        className="text-xs h-auto py-2 px-3"
-                      >
-                        {exercise}
-                      </Button>
-                    ))}
-                  </div>
-                </TabsContent>
-              ))}
-            </ScrollArea>
-          </Tabs>
-        </Card>
-      )}
-
-      {exercises.length === 0 ? (
-        <Card className="p-12 text-center bg-card/50">
-          <p className="text-muted-foreground">Noch keine Übungen. Füge eine hinzu um zu starten!</p>
-        </Card>
-      ) : (
-        <>
-          {exercises.map((exercise) => (
-            <Card key={exercise.id} className="p-4 bg-card border-border">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg">{exercise.name}</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteExercise(exercise.id)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                {exercise.sets.map((set, index) => (
-                  <div key={set.id} className="flex items-center gap-2">
-                    <span className="text-sm font-medium w-8 text-muted-foreground">#{index + 1}</span>
-                    <Input
-                      type="number"
-                      placeholder="Wdh"
-                      min="1"
-                      max="500"
-                      value={set.reps || ""}
-                      onChange={(e) =>
-                        updateSet(exercise.id, set.id, "reps", parseInt(e.target.value) || 0)
-                      }
-                      className="w-20 text-center"
-                    />
-                    <span className="text-muted-foreground">×</span>
-                    <Input
-                      type="number"
-                      placeholder="kg"
-                      min="0"
-                      max="1000"
-                      step="0.5"
-                      value={set.weight || ""}
-                      onChange={(e) =>
-                        updateSet(exercise.id, set.id, "weight", parseFloat(e.target.value) || 0)
-                      }
-                      className="w-24 text-center"
-                    />
-                    <Button
-                      size="sm"
-                      variant={set.completed ? "default" : "outline"}
-                      onClick={() => toggleSetComplete(exercise.id, set.id)}
-                      className={set.completed ? "glow-neon" : ""}
-                    >
-                      <Check className="w-4 h-4" />
-                    </Button>
-                  </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Übung hinzufügen</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Select value={selectedExerciseId} onValueChange={setSelectedExerciseId}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Übung wählen..." />
+              </SelectTrigger>
+              <SelectContent>
+                {exercises?.map((exercise) => (
+                  <SelectItem key={exercise.id} value={exercise.id}>
+                    {exercise.name}
+                  </SelectItem>
                 ))}
-              </div>
+              </SelectContent>
+            </Select>
+            <Button onClick={addExercise}>
+              <Plus className="mr-2 h-4 w-4" />
+              Hinzufügen
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => addSet(exercise.id)}
-                className="w-full mt-3 text-primary"
-              >
-                + Satz hinzufügen
-              </Button>
-            </Card>
-          ))}
+      {Object.entries(groupedSets).map(([exerciseName, exerciseSets]) => (
+        <Card key={exerciseName}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              {exerciseName}
+              <Badge variant="secondary">{exerciseSets.length} Sätze</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {exerciseSets.map((set, index) => {
+              const globalIndex = sets.findIndex(
+                (s) => s === set
+              );
+              return (
+                <div
+                  key={index}
+                  className={`p-4 border rounded-lg space-y-3 ${
+                    set.completed ? "bg-muted/50" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">Satz {set.set_number}</Badge>
+                      <Select
+                        value={set.set_type}
+                        onValueChange={(value) =>
+                          updateSet(globalIndex, { set_type: value })
+                        }
+                        disabled={set.completed}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="warmup">Warm-up</SelectItem>
+                          <SelectItem value="dropset">Dropset</SelectItem>
+                          <SelectItem value="amrap">AMRAP</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {!set.completed && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeSet(globalIndex)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
 
-          <Button onClick={finishWorkout} className="w-full glow-neon" size="lg">
-            Training beenden
-          </Button>
-        </>
-      )}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <Label className="text-xs">Gewicht (kg)</Label>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        value={set.weight ?? ""}
+                        onChange={(e) =>
+                          updateSet(globalIndex, {
+                            weight: e.target.value ? parseFloat(e.target.value) : null,
+                          })
+                        }
+                        disabled={set.completed}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Wdh.</Label>
+                      <Input
+                        type="number"
+                        value={set.reps ?? ""}
+                        onChange={(e) =>
+                          updateSet(globalIndex, {
+                            reps: e.target.value ? parseInt(e.target.value) : null,
+                          })
+                        }
+                        disabled={set.completed}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">RPE (1-10)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        step="0.5"
+                        value={set.rpe ?? ""}
+                        onChange={(e) =>
+                          updateSet(globalIndex, {
+                            rpe: e.target.value ? parseFloat(e.target.value) : null,
+                          })
+                        }
+                        disabled={set.completed}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">RIR</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={set.rir ?? ""}
+                        onChange={(e) =>
+                          updateSet(globalIndex, {
+                            rir: e.target.value ? parseInt(e.target.value) : null,
+                          })
+                        }
+                        disabled={set.completed}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Tempo (z.B. 3110)</Label>
+                      <Input
+                        value={set.tempo ?? ""}
+                        onChange={(e) =>
+                          updateSet(globalIndex, { tempo: e.target.value })
+                        }
+                        placeholder="3110"
+                        disabled={set.completed}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">
+                        <Timer className="inline h-3 w-3 mr-1" />
+                        Pause (Sek.)
+                      </Label>
+                      <Input
+                        type="number"
+                        value={set.rest_planned_sec ?? ""}
+                        onChange={(e) =>
+                          updateSet(globalIndex, {
+                            rest_planned_sec: e.target.value
+                              ? parseInt(e.target.value)
+                              : null,
+                          })
+                        }
+                        disabled={set.completed}
+                      />
+                    </div>
+                  </div>
+
+                  {!set.completed && (
+                    <Button
+                      className="w-full"
+                      onClick={() => completeSet(globalIndex)}
+                    >
+                      Satz abschließen
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      ))}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Notizen</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Wie hast du dich gefühlt? Besonderheiten?"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={4}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default WorkoutTracker;
+}

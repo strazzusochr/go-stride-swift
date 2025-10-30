@@ -1,216 +1,150 @@
-import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Clock, TrendingUp, ChevronRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Calendar, Clock, Dumbbell } from "lucide-react";
 
-interface WorkoutSet {
-  reps: number;
-  weight: number;
-  completed: boolean;
-}
+export default function WorkoutHistory() {
+  const { data: sessions, isLoading } = useQuery({
+    queryKey: ["workout_sessions"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-interface WorkoutExercise {
-  name: string;
-  sets: WorkoutSet[];
-}
+      const { data, error } = await supabase
+        .from("workout_sessions")
+        .select(`
+          *,
+          set_entries (
+            *,
+            exercises (name)
+          )
+        `)
+        .eq("user_id", user.id)
+        .order("date", { ascending: false })
+        .limit(20);
 
-interface WorkoutSession {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  exercises: WorkoutExercise[];
-  totalSets: number;
-  completedSets: number;
-  totalVolume: number;
-}
+      if (error) throw error;
+      return data;
+    },
+  });
 
-const WorkoutHistory = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [workoutHistory, setWorkoutHistory] = useState<WorkoutSession[]>([]);
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutSession | null>(null);
+  if (isLoading) {
+    return <div className="text-center py-8">Lädt...</div>;
+  }
 
-  useEffect(() => {
-    loadWorkoutHistory();
-  }, []);
-
-  const loadWorkoutHistory = () => {
-    const stored = localStorage.getItem("workoutHistory");
-    if (stored) {
-      setWorkoutHistory(JSON.parse(stored));
-    }
-  };
-
-  const getWorkoutsForDate = (date: Date) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    return workoutHistory.filter((workout) => workout.date === dateStr);
-  };
-
-  const selectedDateWorkouts = selectedDate ? getWorkoutsForDate(selectedDate) : [];
-
-  const hasWorkoutOnDate = (date: Date) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    return workoutHistory.some((workout) => workout.date === dateStr);
-  };
-
-  const totalWorkouts = workoutHistory.length;
-  const totalVolume = workoutHistory.reduce((sum, w) => sum + w.totalVolume, 0);
-  const thisWeekWorkouts = workoutHistory.filter((w) => {
-    const workoutDate = new Date(w.date);
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    return workoutDate >= weekAgo;
-  }).length;
+  if (!sessions || sessions.length === 0) {
+    return (
+      <Card>
+        <CardContent className="text-center py-12">
+          <Dumbbell className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Noch keine Workouts</h3>
+          <p className="text-muted-foreground">
+            Starte dein erstes Workout im "Workout"-Tab!
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="pb-24 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Trainingskalender</h2>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="w-4 h-4" />
-          <span>Automatische Zeiterfassung</span>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Workout-Verlauf</h2>
+      <Accordion type="single" collapsible className="space-y-4">
+        {sessions.map((session) => {
+          const exerciseGroups = session.set_entries.reduce((acc, set) => {
+            const exerciseName = set.exercises?.name || "Unbekannt";
+            if (!acc[exerciseName]) {
+              acc[exerciseName] = [];
+            }
+            acc[exerciseName].push(set);
+            return acc;
+          }, {} as Record<string, any[]>);
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="p-4 bg-card">
-          <p className="text-xs text-muted-foreground mb-1">Gesamt</p>
-          <p className="text-2xl font-bold text-primary">{totalWorkouts}</p>
-          <p className="text-xs text-muted-foreground">Trainings</p>
-        </Card>
-        <Card className="p-4 bg-card">
-          <p className="text-xs text-muted-foreground mb-1">Diese Woche</p>
-          <p className="text-2xl font-bold text-primary">{thisWeekWorkouts}</p>
-          <p className="text-xs text-muted-foreground">Einheiten</p>
-        </Card>
-        <Card className="p-4 bg-card">
-          <p className="text-xs text-muted-foreground mb-1">Volumen</p>
-          <p className="text-2xl font-bold text-primary">{(totalVolume / 1000).toFixed(1)}t</p>
-          <p className="text-xs text-muted-foreground">Gesamtgewicht</p>
-        </Card>
-      </div>
+          const totalSets = session.set_entries.length;
+          const duration = session.end_time
+            ? Math.round(
+                (new Date(session.end_time).getTime() -
+                  new Date(session.start_time).getTime()) /
+                  60000
+              )
+            : null;
 
-      {/* Calendar */}
-      <Card className="p-5 bg-card">
-        <div className="flex items-center gap-2 mb-4">
-          <CalendarIcon className="w-5 h-5 text-primary" />
-          <h3 className="font-bold text-lg">Kalender</h3>
-        </div>
-        
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={setSelectedDate}
-          locale={de}
-          className={cn("rounded-md border pointer-events-auto")}
-          modifiers={{
-            workout: (date) => hasWorkoutOnDate(date),
-          }}
-          modifiersStyles={{
-            workout: {
-              fontWeight: 'bold',
-              textDecoration: 'underline',
-              color: 'hsl(var(--primary))',
-            },
-          }}
-        />
-        
-        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-primary"></div>
-            <span>Trainingstag</span>
-          </div>
-        </div>
-      </Card>
-
-      {/* Selected Date Workouts */}
-      {selectedDate && (
-        <Card className="p-5 bg-card">
-          <h3 className="font-bold text-lg mb-4">
-            {format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })}
-          </h3>
-
-          {selectedDateWorkouts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CalendarIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p>Keine Trainingseinheiten an diesem Tag</p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-3">
-                {selectedDateWorkouts.map((workout) => (
-                  <Card
-                    key={workout.id}
-                    className="p-4 bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedWorkout(selectedWorkout?.id === workout.id ? null : workout)}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Clock className="w-4 h-4 text-primary" />
-                          <span className="font-mono">{workout.startTime}</span>
-                          <span className="text-muted-foreground">-</span>
-                          <span className="font-mono">{workout.endTime}</span>
+          return (
+            <AccordionItem key={session.id} value={session.id}>
+              <Card>
+                <AccordionTrigger className="px-6 hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <div className="text-left">
+                      <div className="font-semibold flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        {new Date(session.date).toLocaleDateString("de-DE", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-4 mt-1">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(session.start_time).toLocaleTimeString("de-DE", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        {duration && <span>{duration} Min.</span>}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Badge variant="secondary">
+                        {Object.keys(exerciseGroups).length} Übungen
+                      </Badge>
+                      <Badge variant="outline">{totalSets} Sätze</Badge>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <CardContent className="space-y-4 pt-4">
+                    {Object.entries(exerciseGroups).map(([exerciseName, sets]) => (
+                      <div key={exerciseName} className="border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 flex items-center justify-between">
+                          {exerciseName}
+                          <Badge variant="secondary">{sets.length} Sätze</Badge>
+                        </h4>
+                        <div className="space-y-2">
+                          {sets.map((set, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded"
+                            >
+                              <span className="font-medium">Satz {set.set_number}</span>
+                              <div className="flex gap-4 text-muted-foreground">
+                                {set.weight && <span>{set.weight} kg</span>}
+                                {set.reps && <span>{set.reps} Wdh.</span>}
+                                {set.rpe && <span>RPE {set.rpe}</span>}
+                                {set.rir !== null && <span>RIR {set.rir}</span>}
+                                {set.tempo && <span>{set.tempo}</span>}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <ChevronRight
-                        className={cn(
-                          "w-5 h-5 transition-transform",
-                          selectedWorkout?.id === workout.id && "rotate-90"
-                        )}
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-3 mb-2">
-                      <Badge variant="secondary">
-                        {workout.completedSets}/{workout.totalSets} Sätze
-                      </Badge>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <TrendingUp className="w-3 h-3" />
-                        <span>{workout.totalVolume.toLocaleString()} kg</span>
-                      </div>
-                    </div>
-
-                    {selectedWorkout?.id === workout.id && (
-                      <div className="mt-4 pt-4 border-t border-border space-y-3">
-                        {workout.exercises.map((exercise, idx) => (
-                          <div key={idx} className="space-y-2">
-                            <h4 className="font-semibold text-sm">{exercise.name}</h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {exercise.sets.map((set, setIdx) => (
-                                <div
-                                  key={setIdx}
-                                  className={cn(
-                                    "text-xs p-2 rounded bg-background",
-                                    set.completed ? "border-primary/50 border" : "border-border border"
-                                  )}
-                                >
-                                  <span className="text-muted-foreground">Satz {setIdx + 1}: </span>
-                                  <span className="font-medium">
-                                    {set.reps}×{set.weight}kg
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
+                    ))}
+                    {session.notes && (
+                      <div className="border rounded-lg p-4 bg-muted/30">
+                        <h4 className="font-semibold mb-2">Notizen</h4>
+                        <p className="text-sm text-muted-foreground">{session.notes}</p>
                       </div>
                     )}
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </Card>
-      )}
+                  </CardContent>
+                </AccordionContent>
+              </Card>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
     </div>
   );
-};
-
-export default WorkoutHistory;
+}

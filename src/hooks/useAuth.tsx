@@ -26,10 +26,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
-    // THEN check for existing session
-    auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Check for existing session or sign in anonymously
+    auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        setSession(session);
+        setUser(session?.user ?? null);
+      } else {
+        // Sign in anonymously if no session
+        const { data, error } = await auth.signInAnonymously();
+        if (!error && data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+        }
+      }
       setLoading(false);
     });
 
